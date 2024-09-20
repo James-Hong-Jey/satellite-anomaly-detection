@@ -1,0 +1,5 @@
+./pycache/
+./.venv/
+./data/*
+./models/*
+data_processing_testing.ipynb
