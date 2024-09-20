@@ -1,5 +1,5 @@
-./pycache/
-./.venv/
-./data/*
-./models/*
+__pycache__/
+.venv/
+data/*
+models/*
 data_processing_testing.ipynb
