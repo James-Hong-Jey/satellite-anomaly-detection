@@ -9,19 +9,24 @@ import itertools
 import joblib 
 import ast
 import matplotlib.pyplot as plt
+import os
+
+# TODO: Clean up the current directory stuff, not everything is consistent right now
 
 # This function trains the Isolation Forest model and predicts the anomalies for the test data
 def train_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_name):
     """ This portion of the code trains the model with the training data and applies the model on the test data """
     
     # Load the best model and its hyperparameters for the specified TM Dataset
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
+    model_path = os.path.join(current_dir, f'{model_folder}/best_isolation_forest_model_{firmware_name}.pkl')
     try: 
-        best_model = joblib.load(f'{model_folder}/best_isolation_forest_model_{firmware_name}.pkl')
+        best_model = joblib.load(model_path)
     except:
         # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
         hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmware_name)
-        best_model = joblib.load(f'{model_folder}/best_isolation_forest_model_{firmware_name}.pkl')
+        best_model = joblib.load(model_path)
 
     # Predict the anomaly for the test data
     # y_pred = best_model.predict(X_test_scaled).astype(str)
@@ -73,10 +78,13 @@ def hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmwar
             best_model = model
 
     # Save the best model and its hyperparameters
-    model_folder = "./models"
-    joblib.dump(best_model, f'{model_folder}/best_isolation_forest_model_{firmware_name}.pkl')
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_folder = "models"
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_isolation_forest_{firmware_name}.txt')  
+    pkl_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_isolation_forest_{firmware_name}.pkl')  
+    joblib.dump(best_model, pkl_path)
     print("Model saved")
-    with open(f'{model_folder}/best_hyperparameters_isolation_forest_{firmware_name}.txt', 'w') as f:
+    with open(txt_path, 'w') as f:
         f.write(str(best_params))
 
     return
@@ -87,13 +95,15 @@ def train_ocsvm_model(X_train_scaled, X_test_scaled, y_test, firmware_name):
     # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
     
     # Load the best model and its hyperparameters for the specified TM Dataset
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
+    model_path = os.path.join(current_dir, f'{model_folder}/best_OCSVM_model_{firmware_name}.pkl')
     try: 
-        best_model = joblib.load(f'{model_folder}/best_OCSVM_model_{firmware_name}.pkl')
+        best_model = joblib.load(model_path)
     except:
         # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
         hyperparameter_tuning_ocsvm(X_train_scaled, X_test_scaled, y_test, firmware_name)
-        best_model = joblib.load(f'{model_folder}/best_OCSVM_model_{firmware_name}.pkl')
+        best_model = joblib.load(model_path)
 
     # Predict the anomaly for the test data
     y_pred = best_model.predict(X_test_scaled)
@@ -137,10 +147,13 @@ def hyperparameter_tuning_ocsvm(X_train_scaled, X_test_scaled, y_test, firmware_
             best_model = model
 
     # Save the best model and its hyperparameters
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    joblib.dump(best_model, f'{model_folder}/best_OCSVM_model_{firmware_name}.pkl')
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_OCSVM_{firmware_name}.txt')  
+    pkl_path = os.path.join(current_dir, f'{model_folder}/best_OCSVM_model_{firmware_name}.pkl')  
+    joblib.dump(best_model, pkl_path)
     print("Model saved")
-    with open(f'{model_folder}/best_hyperparameters_OCSVM_{firmware_name}.txt', 'w') as f:
+    with open(txt_path, 'w') as f:
         f.write(str(best_params))
 
     return
@@ -233,9 +246,12 @@ def hyperparameter_tuning_lstm_ae(X_train_tensor, X_val_tensor, firmware_name):
                 best_model = model
             
     # Save the best model and its hyperparameters
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    torch.save(best_model.state_dict(), f'{model_folder}/best_model_lstm_ae_{firmware_name}.pth')
-    with open(f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_name}.txt', 'w') as f:
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_name}.txt')  
+    pth_path = os.path.join(current_dir, f'{model_folder}/best_model_lstm_ae_{firmware_name}.pth')
+    torch.save(best_model.state_dict(), pth_path)
+    with open(txt_path, 'w') as f:
         f.write(str(best_params))
     
     return
@@ -256,14 +272,16 @@ def get_train_error_std(X_train_tensor, model):
 # This function trains the LSTM Autoencoder model and predicts the anomalies for the test data
 def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_name, num_of_std=3, plot_error=False):
     """ This portion of the code sets hyperparameters and trains the model using the training data. """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
+    model_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_name}.txt')    
     try: 
-        with open(f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_name}.txt', 'r') as file:
+        with open(model_path, 'r') as file:
             hyperparameters = file.read()
     except:
         # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
         hyperparameter_tuning_lstm_ae(X_train_tensor, X_val_tensor, firmware_name)
-        with open(f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_name}.txt', 'r') as file:
+        with open(model_path, 'r') as file:
             hyperparameters = file.read()
 
     hyperparameters = ast.literal_eval(hyperparameters)
@@ -274,8 +292,9 @@ def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_na
     dropout = hyperparameters['dropout']
     
     # Create an instance and load the saved model
+    pth_path = os.path.join(current_dir, f'{model_folder}/best_model_lstm_ae_{firmware_name}.pth')    
     model = Autoencoder(input_size, hidden_size, num_layers, dropout)
-    model.load_state_dict(torch.load(f'{model_folder}/best_model_lstm_ae_{firmware_name}.pth', weights_only=True))
+    model.load_state_dict(torch.load(pth_path, weights_only=True))
             
     model.eval()
     with torch.no_grad():
@@ -307,9 +326,9 @@ def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_na
         print(f'train_mean = {train_mean}')
         print(f'train_median = {train_median}')
         print(f'train_std = {train_std}')
-        print(f'test_error_df.median() = {test_error_df['error'].median()}')
-        print(f'test_error_df.mean() = {test_error_df['error'].mean()}')
-        print(f'test_error_df.std() = {test_error_df['error'].std()}')
+        print(f'test_error_df.median() = {test_error_df["error"].median()}')
+        print(f'test_error_df.mean() = {test_error_df["error"].mean()}')
+        print(f'test_error_df.std() = {test_error_df["error"].std()}')
         plt.scatter(inliers.index, inliers['error'], c='blue', label='inliers')
         plt.scatter(outliers.index, outliers['error'], c='red', label='out')
         plt.title('Scatter Plot of Values')

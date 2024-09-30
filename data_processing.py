@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import random
 from sklearn import metrics
+import os
 
 # Ignore warnings
 warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
@@ -19,12 +20,15 @@ def get_csv_vitals(filename='FF_Vitals.csv'):
     return params
 
 def pivot_and_store(filename):
-    destination = f"data/{filename}.csv"
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    destination = os.path.join(current_dir, f"data/{filename}.csv")
     read_df = pd.read_csv(destination)
     pivot_df = read_df.set_index('PARAMETER').T # Check the CSV itself
     pivot_df.reset_index(inplace=True)
     pivot_df.rename(columns={'index': 'timestamp'}, inplace=True)
-    pivot_df.to_csv(f'data/{filename}_pivot.csv', index=False)
+    print(f'saving csv: data/{filename}_pivot.csv')
+    pivot_destination = os.path.join(current_dir, f'data/{filename}_pivot.csv')
+    pivot_df.to_csv(pivot_destination, index=False)
 
 # Depreciated
 def read_data(file_path):
