@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import random
 from sklearn import metrics
 import os
+from visualise_algorithms import plot_scatter
 
 # Ignore warnings
 warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
@@ -29,6 +30,7 @@ def pivot_and_store(filename):
     print(f'saving csv: data/{filename}_pivot.csv')
     pivot_destination = os.path.join(current_dir, f'data/{filename}_pivot.csv')
     pivot_df.to_csv(pivot_destination, index=False)
+    return pivot_df
 
 # Depreciated
 def read_data(file_path):
@@ -134,27 +136,6 @@ def insert_anomalies(df, num_of_anomalies=3):
         df.loc[random_index, random_firmware] = df.loc[random_index, random_firmware] + difference
         df.loc[random_index, 'anomaly'] = 1
     return df
-
-def plot_scatter(df):
-    df = df.reset_index()
-    plt.figure(figsize=(14,8))
-    for column in df.columns:
-        # print(column)
-        if column not in ['timestamp', 'anomaly', 'anomaly_predicted']:
-            plt.scatter(x=df['timestamp'], y=df[column], label=column)
-
-    for i, row in df.iterrows():
-        if row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1: # True positive
-            plt.axvspan(row['timestamp'], row['timestamp'], color='red', alpha=0.3)
-        elif row['anomaly'] == 0 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1: # False Positive
-            plt.axvspan(row['timestamp'], row['timestamp'], color='green', alpha=0.3)
-        elif row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 0: # False Negative
-            plt.axvspan(row['timestamp'], row['timestamp'], color='purple', alpha=0.3)
-
-    plt.xlabel('Timestamp')
-    plt.ylabel('Value')
-    plt.legend()
-    plt.show()
 
 def evaluate_algorithm(df, num_of_anomalies=2):
     total_rows = df.shape[0]

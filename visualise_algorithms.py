@@ -8,6 +8,27 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 
+def plot_scatter(df):
+    df = df.reset_index()
+    plt.figure(figsize=(14,8))
+    for column in df.columns:
+        # print(column)
+        if column not in ['timestamp', 'anomaly', 'anomaly_predicted']:
+            plt.scatter(x=df['timestamp'], y=df[column], label=column)
+
+    for i, row in df.iterrows():
+        if row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1: # True positive
+            plt.axvspan(row['timestamp'], row['timestamp'], color='red', alpha=0.3)
+        elif row['anomaly'] == 0 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1: # False Positive
+            plt.axvspan(row['timestamp'], row['timestamp'], color='green', alpha=0.3)
+        elif row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 0: # False Negative
+            plt.axvspan(row['timestamp'], row['timestamp'], color='purple', alpha=0.3)
+
+    plt.xlabel('Timestamp')
+    plt.ylabel('Value')
+    plt.legend()
+    plt.show()
+
 def plot_3d(inliers, outliers):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
