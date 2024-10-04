@@ -10,6 +10,11 @@ import joblib
 import ast
 import matplotlib.pyplot as plt
 import os
+from matplotlib.colors import LogNorm
+from sklearn import mixture
+from sklearn.metrics import classification_report
+from sklearn.metrics import average_precision_score
+from sklearn.metrics import precision_recall_curve
 
 # TODO: Clean up the current directory stuff, not everything is consistent right now
 
@@ -348,4 +353,19 @@ def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_na
     y_pred = pd.DataFrame({'anomaly_predicted': [0] * len(test_error_df)})
     y_pred.loc[anomaly_indices_list, 'anomaly_predicted'] = 1
 
+    return y_pred
+
+def infer_gmm_model(X_train_scaled, X_test_scaled):
+    # TODO: Implement hyperparameter tuning + model saving
+    clf = mixture.GaussianMixture(n_components=len(X_train_scaled), covariance_type='full')
+    clf.fit(X_train_scaled)
+    y_test_proba = clf.score_samples(X_test_scaled)
+    plt.plot(y_test_proba)
+    plt.title('Anomaly')
+    plt.show()
+    # TODO: Derive a less arbitrary threshold
+    T=-400000
+    y_test_proba[y_test_proba>=T]=0
+    y_test_proba[y_test_proba<T]=1
+    y_pred = pd.DataFrame(y_test_proba, columns=['anomaly_predicted'])
     return y_pred
