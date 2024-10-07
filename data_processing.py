@@ -133,7 +133,7 @@ def insert_anomalies(df, num_of_anomalies=3):
         random_firmware = random.choice(firmware_names)
         multiplier = random.randrange(1, 30)/10
         difference = max(abs(df.loc[random_index, random_firmware] * multiplier - df.loc[random_index, random_firmware]), 8)
-        df.loc[random_index, random_firmware] = df.loc[random_index, random_firmware] + difference
+        df.loc[random_index, random_firmware] = df.loc[random_index, random_firmware] + int(difference)
         df.loc[random_index, 'anomaly'] = 1
     return df
 
@@ -160,30 +160,38 @@ def evaluate_algorithm(df, num_of_anomalies=2):
 
 
 # Accepts pre-pivoted data 
-def data_processing(df, num_of_anomalies=2, single_inference=False):
+def data_processing(df, num_of_anomalies=2, inference_point=None):
     # unique_firmware_names = pivot_df.columns.unique().tolist()
     # random_state = 42
     random_state = random.randint(0, 1000)
-    X_train, X_test = train_test_split(df, test_size=0.2, random_state=random_state)
-    X_test['anomaly'] = 0
-    X_test = insert_anomalies(X_test, num_of_anomalies)
 
     # For LSTM Autoencoder - split the data into 20% test, 65% train, and 15% validation
-    if single_inference:
+    if inference_point:
+        # Non-LSTM
+        X_train = df.copy(deep=True)
+        X_test = pd.DataFrame([inference_point], columns=X_train.columns)
+
+        # LSTM
         X_train_lstm, X_val_lstm = train_test_split(df, test_size=0.2, random_state=random_state)
-        X_test_lstm = X_val_lstm.copy(deep=True) # Placeholder - not used 
+        X_test_lstm = X_train_lstm.copy(deep=True)
         X_test_lstm['anomaly'] = 0
     else:
+        # Non-LSTM
+        X_train, X_test = train_test_split(df, test_size=0.2, random_state=random_state)
+        X_test['anomaly'] = 0
+        X_test = insert_anomalies(X_test, num_of_anomalies)
+
+        # LSTM
         train_val_df, X_test_lstm = train_test_split(df, test_size=0.2, random_state=random_state)
         X_train_lstm, X_val_lstm = train_test_split(train_val_df, test_size=0.18, random_state=random_state)
         X_test_lstm['anomaly'] = 0
         X_test_lstm = insert_anomalies(X_test_lstm, num_of_anomalies)
+
     # print('Before Anomalies added:')
     # plot_scatter(X_test_lstm)
     # print('After Anomalies added:')
     # plot_scatter(X_test_lstm)
     # print(f'Anomaly indices = {X_test_lstm.index[X_test_lstm['anomaly'] == 1].tolist()}')
-
     # Standardize the features (X_train_scaled_2 & X_val_scaled_2 is for LSTM Autoencoder)
     X_train_scaled, X_test_scaled = standardize_features(X_train, None, X_test)
     X_train_lstm_scaled, X_val_lstm_scaled, X_test_lstm_scaled = standardize_features(X_train_lstm, X_val_lstm, X_test_lstm)

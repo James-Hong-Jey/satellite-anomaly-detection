@@ -15,22 +15,23 @@ from sklearn import mixture
 from sklearn.metrics import classification_report
 from sklearn.metrics import average_precision_score
 from sklearn.metrics import precision_recall_curve
+from skopt import BayesSearchCV
 
 # TODO: Clean up the current directory stuff, not everything is consistent right now
 
 # This function trains the Isolation Forest model and predicts the anomalies for the test data
-def train_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_name):
+def train_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
     """ This portion of the code trains the model with the training data and applies the model on the test data """
     
     # Load the best model and its hyperparameters for the specified TM Dataset
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    model_path = os.path.join(current_dir, f'{model_folder}/best_isolation_forest_model_{firmware_name}.pkl')
+    model_path = os.path.join(current_dir, f'{model_folder}/best_isolation_forest_model_{firmware_names}.pkl')
     try: 
         best_model = joblib.load(model_path)
     except:
         # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
-        hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmware_name)
+        hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmware_names)
         best_model = joblib.load(model_path)
 
     # Predict the anomaly for the test data
@@ -40,7 +41,7 @@ def train_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_name):
     return y_pred
 
 # This function does hyperparameter tuning for the Isolation Forest model
-def hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmware_name):
+def hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmware_names):
     # Define hyperparameter space
     contamination_values = [0.1, 0.001, 1e-6]
     # contamination_values = np.linspace(0.001, 0.400, 10)
@@ -85,8 +86,8 @@ def hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmwar
     # Save the best model and its hyperparameters
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_isolation_forest_{firmware_name}.txt')  
-    pkl_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_isolation_forest_{firmware_name}.pkl')  
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_isolation_forest_{firmware_names}.txt')  
+    pkl_path = os.path.join(current_dir, f'{model_folder}/best_isolation_forest_model_{firmware_names}.pkl')  
     joblib.dump(best_model, pkl_path)
     print("Model saved")
     with open(txt_path, 'w') as f:
@@ -95,19 +96,19 @@ def hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmwar
     return
 
 # This function trains the One-Class SVM model and predicts the anomalies for the test data
-def train_ocsvm_model(X_train_scaled, X_test_scaled, y_test, firmware_name):
+def train_ocsvm_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
     """ This portion of the code trains the model with the training data and applies the model on the test data """
     # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
     
     # Load the best model and its hyperparameters for the specified TM Dataset
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    model_path = os.path.join(current_dir, f'{model_folder}/best_OCSVM_model_{firmware_name}.pkl')
+    model_path = os.path.join(current_dir, f'{model_folder}/best_OCSVM_model_{firmware_names}.pkl')
     try: 
         best_model = joblib.load(model_path)
     except:
         # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
-        hyperparameter_tuning_ocsvm(X_train_scaled, X_test_scaled, y_test, firmware_name)
+        hyperparameter_tuning_ocsvm(X_train_scaled, X_test_scaled, y_test, firmware_names)
         best_model = joblib.load(model_path)
 
     # Predict the anomaly for the test data
@@ -116,7 +117,7 @@ def train_ocsvm_model(X_train_scaled, X_test_scaled, y_test, firmware_name):
     return y_pred
 
 # This function does hyperparameter tuning for the OC-SVM model
-def hyperparameter_tuning_ocsvm(X_train_scaled, X_test_scaled, y_test, firmware_name):
+def hyperparameter_tuning_ocsvm(X_train_scaled, X_test_scaled, y_test, firmware_names):
     # Define hyperparameter space
     contamination_values = [0.01, 0.001, 1e-6]
     kernel_values = ['rbf', 'poly', 'sigmoid']
@@ -154,8 +155,8 @@ def hyperparameter_tuning_ocsvm(X_train_scaled, X_test_scaled, y_test, firmware_
     # Save the best model and its hyperparameters
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_OCSVM_{firmware_name}.txt')  
-    pkl_path = os.path.join(current_dir, f'{model_folder}/best_OCSVM_model_{firmware_name}.pkl')  
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_OCSVM_{firmware_names}.txt')  
+    pkl_path = os.path.join(current_dir, f'{model_folder}/best_OCSVM_model_{firmware_names}.pkl')  
     joblib.dump(best_model, pkl_path)
     print("Model saved")
     with open(txt_path, 'w') as f:
@@ -180,7 +181,7 @@ class Autoencoder(nn.Module):
         return decoded
 
 # This function does hyperparameter tuning for the LSTM Autoencoder model
-def hyperparameter_tuning_lstm_ae(X_train_tensor, X_val_tensor, firmware_name):
+def hyperparameter_tuning_lstm_ae(X_train_tensor, X_val_tensor, firmware_names):
     input_size = X_train_tensor.shape[1] # No. columns/input features
     hidden_size_list = [8, 16, 32, 64, 128, 256] # No. of layers in each LSTM layer
     learning_rate_list = [0.01, 0.1]
@@ -253,8 +254,8 @@ def hyperparameter_tuning_lstm_ae(X_train_tensor, X_val_tensor, firmware_name):
     # Save the best model and its hyperparameters
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_name}.txt')  
-    pth_path = os.path.join(current_dir, f'{model_folder}/best_model_lstm_ae_{firmware_name}.pth')
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_names}.txt')  
+    pth_path = os.path.join(current_dir, f'{model_folder}/best_model_lstm_ae_{firmware_names}.pth')
     torch.save(best_model.state_dict(), pth_path)
     with open(txt_path, 'w') as f:
         f.write(str(best_params))
@@ -275,17 +276,17 @@ def get_train_error_std(X_train_tensor, model):
         return train_error.median().item(), train_error.mean().item(), train_error.std().item()
 
 # This function trains the LSTM Autoencoder model and predicts the anomalies for the test data
-def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_name, num_of_std=3, plot_error=False):
+def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_names, num_of_std=3, plot_error=False):
     """ This portion of the code sets hyperparameters and trains the model using the training data. """
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    model_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_name}.txt')    
+    model_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_lstm_ae_{firmware_names}.txt')    
     try: 
         with open(model_path, 'r') as file:
             hyperparameters = file.read()
     except:
         # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
-        hyperparameter_tuning_lstm_ae(X_train_tensor, X_val_tensor, firmware_name)
+        hyperparameter_tuning_lstm_ae(X_train_tensor, X_val_tensor, firmware_names)
         with open(model_path, 'r') as file:
             hyperparameters = file.read()
 
@@ -297,7 +298,7 @@ def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_na
     dropout = hyperparameters['dropout']
     
     # Create an instance and load the saved model
-    pth_path = os.path.join(current_dir, f'{model_folder}/best_model_lstm_ae_{firmware_name}.pth')    
+    pth_path = os.path.join(current_dir, f'{model_folder}/best_model_lstm_ae_{firmware_names}.pth')    
     model = Autoencoder(input_size, hidden_size, num_layers, dropout)
     model.load_state_dict(torch.load(pth_path, weights_only=True))
             
@@ -355,14 +356,50 @@ def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_na
 
     return y_pred
 
-def infer_gmm_model(X_train_scaled, X_test_scaled):
-    # TODO: Implement hyperparameter tuning + model saving
-    clf = mixture.GaussianMixture(n_components=len(X_train_scaled), covariance_type='full')
-    clf.fit(X_train_scaled)
-    y_test_proba = clf.score_samples(X_test_scaled)
+def hyperparameter_tuning_gmm(X_train_scaled, firmware_names):
+    # working defaults:
+    #     gmm params: {'covariance_type': 'full', 'init_params': 'kmeans', 'max_iter': 100, 'means_init': None, 'n_components': 6, 'n_init': 1, 'precisions_init': None, 'random_state': None, 'reg_covar': 1e-06, 
+    # 'tol': 0.001, 'verbose': 0, 'verbose_interval': 10, 'warm_start': False, 'weights_init': None}
+    gmm = mixture.GaussianMixture(n_components=X_train_scaled.shape[1], covariance_type='full')
+    gmm.fit(X_train_scaled)
+    search_spaces = {
+        'init_params': ['kmeans', 'k-means++', 'random', 'random_from_data'],
+        'tol': (1e-5, 1e-1, 'log-uniform'),
+        'max_iter': (100, 500)
+    }
+    bayes_search = BayesSearchCV(gmm, search_spaces, verbose=5)
+    bayes_search.fit(X_train_scaled)
+    best_params = bayes_search.best_params_
+    print(f'Best hyperparameters: {best_params}')
+    gmm.set_params(**best_params)
+    print(f'gmm params: {gmm.get_params()}')
+
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_folder = "models"
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_gmm_{firmware_names}.txt')  
+    pkl_path = os.path.join(current_dir, f'{model_folder}/best_gmm_model_{firmware_names}.pkl')  
+    joblib.dump(gmm, pkl_path)
+    print("Model saved")
+    with open(txt_path, 'w') as f:
+        f.write(str(best_params))
+    return gmm
+
+def infer_gmm_model(X_train_scaled, X_test_scaled, firmware_names):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_folder = "models"
+    model_path = os.path.join(current_dir, f'{model_folder}/best_gmm_model_{firmware_names}.pkl')
+    try: 
+        gmm = joblib.load(model_path)
+        print(f"Existing Model Found. ")
+    except:
+        gmm = hyperparameter_tuning_gmm(X_train_scaled, firmware_names)
+
+    y_test_proba = gmm.score_samples(X_test_scaled)
     plt.plot(y_test_proba)
     plt.title('Anomaly')
-    plt.show()
+    # plt.show()
+
     # TODO: Derive a less arbitrary threshold
     T=-400000
     y_test_proba[y_test_proba>=T]=0
