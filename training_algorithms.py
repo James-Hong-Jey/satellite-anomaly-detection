@@ -391,13 +391,13 @@ def infer_gmm_model(X_train_scaled, X_test_scaled, firmware_names):
     model_path = os.path.join(current_dir, f'{model_folder}/best_gmm_model_{firmware_names}.pkl')
     try: 
         gmm = joblib.load(model_path)
-        print(f"Existing Model Found. ")
+        # print(f"Existing Model Found. ")
     except:
         gmm = hyperparameter_tuning_gmm(X_train_scaled, firmware_names)
 
     y_test_proba = gmm.score_samples(X_test_scaled)
-    plt.plot(y_test_proba)
-    plt.title('Anomaly')
+    # plt.plot(y_test_proba)
+    # plt.title('Anomaly')
     # plt.show()
 
     # TODO: Derive a less arbitrary threshold

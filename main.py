@@ -47,26 +47,42 @@ def single_point_inference(algorithm, inference_point, selected_columns):
     # return y_pred['anomaly_predicted'].values
     return prediction
 
-def multi_point_visualisation(algorithm, selected_columns, num_of_anomalies=2):
-    df = get_df(selected_columns)
-    X_train_scaled, X_test_scaled, X_train_tensor, X_val_tensor, X_test_tensor, X_test, X_test_lstm = data_processing(df, num_of_anomalies)
+
+def multi_point_visualisation(algorithm, selected_columns, num_of_anomalies=2, random_state=None, plot=True):
+    multi_df = get_df(selected_columns)
+    X_train_scaled, X_test_scaled, X_train_tensor, X_val_tensor, X_test_tensor, X_test, X_test_lstm = data_processing(multi_df, num_of_anomalies, None, random_state)
 
     match algorithm:
         case 'LSTM':
-            y_pred = infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_name=f'{selected_columns}', num_of_std=3.5, plot_error=True) # Change this figure to affect recall
+            y_pred = infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_names=f'{selected_columns}', num_of_std=3, plot_error=False) # Change this figure to affect recall
+            visual_X_test = X_test_lstm
         case 'GMM':
             y_pred = infer_gmm_model(X_train_scaled, X_test_scaled, selected_columns)
+            visual_X_test = X_test
         case _:
             raise Exception("Invalid algorithm")
     
-    X_test_lstm['anomaly_predicted'] = y_pred['anomaly_predicted'].values
-    inliers = X_test_lstm[X_test_lstm['anomaly_predicted'] == 0]
-    outliers = X_test_lstm[X_test_lstm['anomaly_predicted'] == 1]
-    print(f"{algorithm}")
-    evaluate_algorithm(X_test_lstm, num_of_anomalies=num_of_anomalies)
-    plot_scatter(X_test_lstm)
-            
-    # plot_pca(X_test_lstm, ['anomaly', 'anomaly_predicted'])
+    visual_X_test['anomaly_predicted'] = y_pred['anomaly_predicted'].values
+    inliers = visual_X_test[visual_X_test['anomaly_predicted'] == 0]
+    outliers = visual_X_test[visual_X_test['anomaly_predicted'] == 1]
+    # print(f"{algorithm}")
+    if plot:
+        return evaluate_algorithm(visual_X_test, num_of_anomalies=num_of_anomalies, verbose=True)
+        plot_scatter(visual_X_test)
+    else:
+        return evaluate_algorithm(visual_X_test, num_of_anomalies=num_of_anomalies, verbose=False)
+    # plot_pca(visual_X_test, ['anomaly', 'anomaly_predicted'])
+
+def benchmark_algorithm(algorithm, selected_columns, n=100, num_of_anomalies=5):
+    for i in range (0, num_of_anomalies + 1): 
+        f1_score, precision, recall = 0, 0, 0
+        for j in range (1, n+1):
+            score = multi_point_visualisation(algorithm, selected_columns, num_of_anomalies=i, random_state=j, plot=False)
+            f1_score += score['f1_score']
+            precision += score['precision']
+            recall += score['recall']
+        print(f"Algorithm: {algorithm}, Num of Anomalies: {i}, F1 Score: {f1_score/n}, Precision: {precision/n}, Recall: {recall/n}")
+        
 
 if __name__ == "__main__":
     start = time.time()
@@ -75,13 +91,14 @@ if __name__ == "__main__":
 
     selected_columns = TS_temp_5
 
-    # multi_point_visualisation(selected_columns)
     # algorithms = ['LSTM', 'GMM']
-    # multi_point_visualisation_gmm('LSTM', selected_columns, 2)
+    # multi_point_visualisation('GMM', selected_columns, 5)
+    benchmark_algorithm('LSTM', selected_columns, n=1000, num_of_anomalies=10)
 
     # Delete existing models to retrain on the entire dataset, including the original "test" data
-    test_anomaly = [-0.5824, -0.0612, -0.7458, -0.7021, 0]
-    single_point_inference('GMM', test_anomaly, selected_columns)
+
+    # test_anomaly = [-0.5824, -0.0612, -0.7458, -0.7021, 0]
+    # single_point_inference('GMM', test_anomaly, selected_columns)
     # test_normal = [-0.5824, -0.0612, -0.7458, -0.7021, 6.0000]
     # single_point_inference(test_normal, selected_columns)
     end = time.time()

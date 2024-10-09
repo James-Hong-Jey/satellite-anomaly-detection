@@ -124,7 +124,8 @@ def label_test_data_anomalies(X_test, firmware_name):
     X_test = X_test.drop(columns=['anomaly'])
     return y_test, X_test
 
-def insert_anomalies(df, num_of_anomalies=3):
+def insert_anomalies(df, num_of_anomalies=3, random_state=42):
+    random.seed(random_state)
     random_indexes = random.sample([int(i) for i in df.index.tolist()], num_of_anomalies)
     # firmware_names = ['ADCS_ACS_RW.X.temp', 'ADCS_ACS_RW.Y.temp', 'ADCS_ACS_RW.Z.temp', 'ADCS_ADC_MCU.temp', 'ADCS_ADC_TS.temp[0]', 'ADCS_ADC_TS.temp[1]']
     firmware_names = df.drop(columns=['anomaly']).columns.tolist()
@@ -137,33 +138,36 @@ def insert_anomalies(df, num_of_anomalies=3):
         df.loc[random_index, 'anomaly'] = 1
     return df
 
-def evaluate_algorithm(df, num_of_anomalies=2):
+def evaluate_algorithm(df, num_of_anomalies=2, verbose=True):
     total_rows = df.shape[0]
-    print(f'total_rows = {total_rows}')
-    print(f'Num of Anomalies planted: {num_of_anomalies}')
     true_positive = df[(df['anomaly'] == 1) & (df['anomaly_predicted'] == 1)].shape[0]
-    print(f'true_positive (red) = {true_positive}')
     false_negative = df[(df['anomaly'] == 1) & (df['anomaly_predicted'] == 0)].shape[0]
-    print(f'false_negative (purple) = {false_negative}')
     true_negative = df[(df['anomaly'] == 0) & (df['anomaly_predicted'] == 0)].shape[0]
-    print(f'true_negative (blue)  = {true_negative}')
     false_positive = df[(df['anomaly'] == 0) & (df['anomaly_predicted'] == 1)].shape[0]
-    print(f'false_positive (green)  = {false_positive}')
 
-    precision = metrics.precision_score(df['anomaly'].values, df['anomaly_predicted'], pos_label=1)
-    recall = metrics.recall_score(df['anomaly'].values, df['anomaly_predicted'], pos_label=1)
-    f1_score = metrics.f1_score(df['anomaly'].values, df['anomaly_predicted'], pos_label=1)
-    print(f'precision = {precision}') # True positive / True + False Positives 
-    print(f'recall = {recall}') # True positive / True Positive + False Negative 
-    print(f'f1_score = {f1_score}')
+    precision = metrics.precision_score(df['anomaly'].values, df['anomaly_predicted'], pos_label=1, zero_division=1)
+    recall = metrics.recall_score(df['anomaly'].values, df['anomaly_predicted'], pos_label=1, zero_division=1)
+    f1_score = metrics.f1_score(df['anomaly'].values, df['anomaly_predicted'], pos_label=1, zero_division=1)
 
+    if verbose:
+        print(f'total_rows = {total_rows}')
+        print(f'Num of Anomalies planted: {num_of_anomalies}')
+        print(f'true_positive (red) = {true_positive}')
+        print(f'false_negative (purple) = {false_negative}')
+        print(f'true_negative (blue)  = {true_negative}')
+        print(f'false_positive (green)  = {false_positive}')
+        print(f'precision = {precision}') # True positive / True + False Positives 
+        print(f'recall = {recall}') # True positive / True Positive + False Negative 
+        print(f'f1_score = {f1_score}')
 
+    scores = {var: eval(var) for var in ['total_rows', 'true_positive', 'false_negative', 'true_negative', 'false_positive', 'precision', 'recall', 'f1_score']}
+    return scores
 
 # Accepts pre-pivoted data 
-def data_processing(df, num_of_anomalies=2, inference_point=None):
+def data_processing(df, num_of_anomalies=2, inference_point=None, random_state=None):
     # unique_firmware_names = pivot_df.columns.unique().tolist()
-    # random_state = 42
-    random_state = random.randint(0, 1000)
+    if random_state is None:
+        random_state = random.randint(0, 1000)
 
     # For LSTM Autoencoder - split the data into 20% test, 65% train, and 15% validation
     if inference_point:
@@ -176,13 +180,14 @@ def data_processing(df, num_of_anomalies=2, inference_point=None):
         X_test_lstm = X_train_lstm.copy(deep=True)
         X_test_lstm['anomaly'] = 0
     else:
+        lstm_df = df.copy(deep=True)
         # Non-LSTM
         X_train, X_test = train_test_split(df, test_size=0.2, random_state=random_state)
         X_test['anomaly'] = 0
-        X_test = insert_anomalies(X_test, num_of_anomalies)
+        X_test = insert_anomalies(X_test, num_of_anomalies, random_state)
 
         # LSTM
-        train_val_df, X_test_lstm = train_test_split(df, test_size=0.2, random_state=random_state)
+        train_val_df, X_test_lstm = train_test_split(lstm_df, test_size=0.2, random_state=random_state)
         X_train_lstm, X_val_lstm = train_test_split(train_val_df, test_size=0.18, random_state=random_state)
         X_test_lstm['anomaly'] = 0
         X_test_lstm = insert_anomalies(X_test_lstm, num_of_anomalies)
