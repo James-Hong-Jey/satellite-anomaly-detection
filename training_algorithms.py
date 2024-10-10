@@ -401,7 +401,7 @@ def infer_gmm_model(X_train_scaled, X_test_scaled, firmware_names):
     # plt.show()
 
     # TODO: Derive a less arbitrary threshold
-    T=-400000
+    T=-400
     y_test_proba[y_test_proba>=T]=0
     y_test_proba[y_test_proba<T]=1
     y_pred = pd.DataFrame(y_test_proba, columns=['anomaly_predicted'])

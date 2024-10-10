@@ -67,11 +67,12 @@ def multi_point_visualisation(algorithm, selected_columns, num_of_anomalies=2, r
     outliers = visual_X_test[visual_X_test['anomaly_predicted'] == 1]
     # print(f"{algorithm}")
     if plot:
-        return evaluate_algorithm(visual_X_test, num_of_anomalies=num_of_anomalies, verbose=True)
         plot_scatter(visual_X_test)
+        return evaluate_algorithm(visual_X_test, num_of_anomalies=num_of_anomalies, verbose=True)
     else:
         return evaluate_algorithm(visual_X_test, num_of_anomalies=num_of_anomalies, verbose=False)
-    # plot_pca(visual_X_test, ['anomaly', 'anomaly_predicted'])
+    plot_pca(visual_X_test, ['anomaly', 'anomaly_predicted'])
+    plot_tsne(visual_X_test, ['anomaly', 'anomaly_predicted'])
 
 def benchmark_algorithm(algorithm, selected_columns, n=100, num_of_anomalies=5):
     for i in range (0, num_of_anomalies + 1): 
@@ -92,14 +93,14 @@ if __name__ == "__main__":
     selected_columns = TS_temp_5
 
     # algorithms = ['LSTM', 'GMM']
-    # multi_point_visualisation('GMM', selected_columns, 5)
-    benchmark_algorithm('LSTM', selected_columns, n=1000, num_of_anomalies=10)
+    multi_point_visualisation('GMM', selected_columns, 5)
+    # benchmark_algorithm('LSTM', selected_columns, n=1000, num_of_anomalies=10)
 
     # Delete existing models to retrain on the entire dataset, including the original "test" data
 
-    # test_anomaly = [-0.5824, -0.0612, -0.7458, -0.7021, 0]
+    # test_anomaly = [-0.5824, -0.0612, -0.7458, -0.7021, 20]
     # single_point_inference('GMM', test_anomaly, selected_columns)
-    # test_normal = [-0.5824, -0.0612, -0.7458, -0.7021, 6.0000]
-    # single_point_inference(test_normal, selected_columns)
+    # test_normal = [-0.5824, -0.0612, -0.7458, -0.7021, 3.0000]
+    # single_point_inference('GMM', test_normal, selected_columns)
     end = time.time()
     print(f'Execution time: {end - start}s')
