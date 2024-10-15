@@ -25,15 +25,17 @@ from main import single_point_inference
 LOG_PARAMS = ['ADCS_ADC_TSXP_temp', 'ADCS_ADC_TSXN_temp', 'ADCS_ADC_TSYP_temp', 'ADCS_ADC_TSYN_temp', 'ADCS_ADC_TSZP_temp']
 
 def anomaly_detection():
-    firmware_name = ['ADC_TS-1 (XP) Temperature', 'ADC_TS-2 (XN) Temperature',
-    'ADC_TS-3 (YP) Temperature', 'ADC_TS-4 (YN) Temperature', 'ADC_TS-5 (ZP) Temperature']
-    inference_point = np.array([])
-    logged_params = mcs.read() # Specifically for MCS
-    for param in firmware_name:
-        np.array.append(int(logged_params[param]))
-    prediction = single_point_inference(array, firmware_name)
-    # print(f"Prediction: {"Anomaly" if prediction == 1 else "Normal"}")
-    return prediction # Either 1 or 0
+    alias_names = ['ADC_TS-1 (XP) Temperature', 'ADC_TS-2 (XN) Temperature',
+     'ADC_TS-3 (YP) Temperature', 'ADC_TS-4 (YN) Temperature', 'ADC_TS-5 (ZP) Temperature']
+    firmware_names = ['ADCS_ADC_TSXP_temp', 'ADCS_ADC_TSXN_temp',
+     'ADCS_ADC_TSYP_temp', 'ADCS_ADC_TSYN_temp', 'ADCS_ADC_TSZP_temp']
+    inference_point = []
+    logged_params = mcs.read()
+    for param in firmware_names:
+        print(f"{param}: {logged_params[param]}")
+        inference_point.append(int(logged_params[param]))
+    prediction = single_point_inference(None, 'GMM', inference_point, alias_names)
+    return prediction
 ```
 
 ## Data Requirements

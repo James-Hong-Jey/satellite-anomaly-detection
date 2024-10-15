@@ -12,7 +12,11 @@ warnings.filterwarnings('always')
 
 # firmware names is an array of all involved firmware names, and inference point is a numpy array of values corresponding to those firmware names
 def single_point_inference(df, algorithm, inference_point, selected_columns):
-    single_df = df.copy(deep=True)
+    if df == None:
+        single_df = get_df("dec_2023_data", selected_columns)
+    else:
+        single_df = df.copy(deep=True)
+        
     if inference_point == None:
         inference_point = [-0.5824,-0.0612,-0.7458,-0.7021,20000,0]
     inference_point.append(0)
@@ -86,7 +90,10 @@ def benchmark_algorithm(df, algorithm, selected_columns, n=100, num_of_anomalies
             'Recall': recall/n
         })
     results_df = pd.DataFrame(results)
-    results_df.to_csv(f"results/results_{algorithm}.csv")
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    selected_columns = hash_firmware_names(selected_columns)
+    csv_path = os.path.join(current_dir, f"results/results_{algorithm}_{selected_columns}.csv")
+    results_df.to_csv(csv_path)
     return results_df
         
 
@@ -101,7 +108,7 @@ if __name__ == "__main__":
 
     # 1) Fill in filename, choose which list of columns to use 
     filename = "dec_2023_data"
-    selected_columns = all_adcs_params
+    selected_columns = TS_temp_5
     hashed_columns = hash_firmware_names(selected_columns) # hashed > 200 chars, untouched otherwise
     df = get_df(filename, selected_columns)   
 
@@ -113,16 +120,16 @@ if __name__ == "__main__":
     # 2) Uncomment either multi_point_visualisation or benchmark_algorithm, don't do both
     # Results from benchmark_algorithm will be saved in ./results, rename to prevent overwrite
     # Alternatively, comment out the for loop and specify algorithm manually
-    for algorithm in algorithms:
-        multi_point_visualisation(df, algorithm, hashed_columns, 4, random_state)
+    # for algorithm in algorithms:
+    #     multi_point_visualisation(df, algorithm, hashed_columns, 4, random_state)
         # benchmark_algorithm(df, algorithm, hashed_columns, n=1000, num_of_anomalies=10)
 
     # 3) Uncomment single_point_inference to test a single point
     # When switching between single_point_inference and multi_point_visualisation, 
     # remember to delete the corresponding models in ./models to retrain it
 
-    # test_anomaly = [-0.5824, -0.0612, -0.7458, -0.7021, 20]
-    # single_point_inference(df, 'GMM', test_anomaly, selected_columns)
+    test_anomaly = [-0.5824, -0.0612, -0.7458, -0.7021, 20]
+    single_point_inference(df, 'GMM', test_anomaly, selected_columns)
 
     # test_normal = [-0.5824, -0.0612, -0.7458, -0.7021, 3.0000]
     # single_point_inference(df, 'GMM', test_normal, selected_columns)
