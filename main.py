@@ -27,8 +27,8 @@ def single_point_inference(df, algorithm, inference_point, selected_columns):
             y_pred = infer_gmm_model(X_train_scaled, X_test_scaled, selected_columns)
         case _:
             raise Exception("Invalid algorithm")
-    prediction = "Anomaly" if y_pred['anomaly_predicted'].values == 1 else "Normal"
-    print(f"Prediction: {prediction}")
+    prediction = y_pred['anomaly_predicted'].values
+    print(f"Prediction: {"Anomaly" if prediction == 1 else "Normal"}")
     # return y_pred['anomaly_predicted'].values
     return prediction
 

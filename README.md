@@ -12,7 +12,29 @@ Project was developed in ```Python 3.12.3```
 2. Configure main.py
     1. Configure the data source "filename"
     2. Configure the firmware names in an array
+    3. Choose main.py behaviour (see below section)
 3. ```python main.py```
+
+### For use in MCS:
+```
+ANOMALY_DETECTION_DEST = r"C:\Users\John\Anomaly Detection"
+sys.path.append(ANOMALY_DETECTION_DEST)
+from main import single_point_inference
+
+# Take note that the data set uses alias names, Log Params uses firmware names
+LOG_PARAMS = ['ADCS_ADC_TSXP_temp', 'ADCS_ADC_TSXN_temp', 'ADCS_ADC_TSYP_temp', 'ADCS_ADC_TSYN_temp', 'ADCS_ADC_TSZP_temp']
+
+def anomaly_detection():
+    firmware_name = ['ADC_TS-1 (XP) Temperature', 'ADC_TS-2 (XN) Temperature',
+    'ADC_TS-3 (YP) Temperature', 'ADC_TS-4 (YN) Temperature', 'ADC_TS-5 (ZP) Temperature']
+    inference_point = np.array([])
+    logged_params = mcs.read() # Specifically for MCS
+    for param in firmware_name:
+        np.array.append(int(logged_params[param]))
+    prediction = single_point_inference(array, firmware_name)
+    # print(f"Prediction: {"Anomaly" if prediction == 1 else "Normal"}")
+    return prediction # Either 1 or 0
+```
 
 ## Data Requirements
 The CSV required in /data/{filename}.csv would ideally have a similar format to below where each row represents a different parameter, and each column represents a timestamp. This format is later pivoted to every row being a timestamp and each column being a parameter, saved as /data/{filename}_pivot.csv. 
@@ -23,12 +45,19 @@ The CSV required in /data/{filename}.csv would ideally have a similar format to 
 ```
 
 ## Configuring main.py
-You can configure it to perform single point datapoint inference, or multi-point inference with visualisation over a randomised test set under main.py
+You can configure it to 
+
+1. Perform Multi-Point Visualisation 
+    * This will plant a certain number of anomalies in the test dataset and visualise the model's predictions
+2. Benchmark Algorithm Performance
+    * This will run multi-point inference n (default=1000) times across a range of planted anomaly numbers, and return the average Precision, Recall and F1-Score in ```./results/results_{algorithm}.csv```
+    * Usually takes ~30 mins at n=1000
+3. Perform Single Point Inference
 
 single_point_inference(inference_point, firmware_name) can be imported elsewhere where 
-firmware name is an array of all involved firmware names, and inference point is a numpy array of values corresponding to those firmware names.
+firmware name is an array of all involved firmware names, and inference point is a numpy array of values corresponding to those firmware names. Designed for use with MCS
 
-The first time that a specific series of firmware names is run, it will train the data and create a new model. If you wish to use the same firmware names but create a new model i.e. swapped the dataset, please delete the previous model before continuing.
+The first time that a specific series of firmware names is run for a certain algorithm, it will train the data and create a new model. If you wish to use the same firmware names but create a new model i.e. swapped the dataset or changed from multi to single inference, please **delete the existing model in ```./models```** before continuing. The training sets will be different and therefore should be retrained.
 
 ## Acknowledgements 
 - James Hong, the DSO Intern in charge of this project
