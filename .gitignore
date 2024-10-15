@@ -2,4 +2,5 @@ __pycache__/
 .venv/
 data/*
 models/*
+results/*
 data_processing_testing.ipynb

@@ -10,15 +10,46 @@ import random
 from sklearn import metrics
 import os
 from visualise_algorithms import plot_scatter
+import hashlib
 
 # Ignore warnings
 warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
+
+def get_df(filename, selected_columns):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(current_dir, f'data/{filename}_pivot.csv')
+    if os.path.exists(csv_path) == False:
+        pivot_and_store(filename)
+    df = pd.read_csv(csv_path, index_col='timestamp')
+
+    df = df[selected_columns]
+    df['anomaly'] = 0
+    df = df.replace(["NaN", "NULL", ""], np.nan)
+    df = df.dropna(how='any')
+    unique_firmware_names = df.columns.unique().tolist()
+    return df
 
 def get_csv_vitals(filename='FF_Vitals.csv'):
     with open(filename, 'r') as file:
         reader = csv.reader(file)
         params = next(reader)
     return params
+
+# Returns the list if < 255 characters, returns hash otherwise
+def hash_firmware_names(firmware_names):
+    feature_str = ','.join(firmware_names)
+    full_path = os.path.join(os.path.dirname(__file__), feature_str)
+    best_model_text = 60 #estimated
+    MAX_PATH_WINDOWS = 260 - best_model_text
+    # MAX_PATH_LINUX = 4096 - best_model_text
+
+    if len(full_path) >= MAX_PATH_WINDOWS:
+        hash_object = hashlib.sha256(feature_str.encode())
+        hash_digest = hash_object.hexdigest()
+        n_first_characters = 10
+        return hash_digest[:n_first_characters]
+    else:
+        return firmware_names
 
 def pivot_and_store(filename):
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -204,4 +235,4 @@ def data_processing(df, num_of_anomalies=2, inference_point=None, random_state=N
     # Convert to tensor (for LSTM Autoencoder)
     X_train_tensor, X_val_tensor, X_test_tensor = convert_to_tensor(X_train_lstm_scaled, X_val_lstm_scaled, X_test_lstm_scaled)
 
-    return X_train_scaled, X_test_scaled, X_train_tensor, X_val_tensor, X_test_tensor, X_test, X_test_lstm
+    return X_train, X_test, X_train_scaled, X_test_scaled, X_train_tensor, X_val_tensor, X_test_tensor, X_test_lstm

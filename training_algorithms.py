@@ -16,11 +16,12 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import average_precision_score
 from sklearn.metrics import precision_recall_curve
 from skopt import BayesSearchCV
+import xgboost as xgb 
 
 # TODO: Clean up the current directory stuff, not everything is consistent right now
 
 # This function trains the Isolation Forest model and predicts the anomalies for the test data
-def train_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
+def infer_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
     """ This portion of the code trains the model with the training data and applies the model on the test data """
     
     # Load the best model and its hyperparameters for the specified TM Dataset
@@ -36,8 +37,8 @@ def train_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
 
     # Predict the anomaly for the test data
     # y_pred = best_model.predict(X_test_scaled).astype(str)
-    y_pred = best_model.predict(X_test_scaled)
-
+    y_test_proba = best_model.predict(X_test_scaled)
+    y_pred = pd.DataFrame(y_test_proba, columns=['anomaly_predicted'])
     return y_pred
 
 # This function does hyperparameter tuning for the Isolation Forest model
@@ -96,7 +97,7 @@ def hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmwar
     return
 
 # This function trains the One-Class SVM model and predicts the anomalies for the test data
-def train_ocsvm_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
+def infer_ocsvm_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
     """ This portion of the code trains the model with the training data and applies the model on the test data """
     # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
     
@@ -112,8 +113,8 @@ def train_ocsvm_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
         best_model = joblib.load(model_path)
 
     # Predict the anomaly for the test data
-    y_pred = best_model.predict(X_test_scaled)
-
+    y_test_proba = best_model.predict(X_test_scaled)
+    y_pred = pd.DataFrame(y_test_proba, columns=['anomaly_predicted'])
     return y_pred
 
 # This function does hyperparameter tuning for the OC-SVM model
@@ -180,6 +181,7 @@ class Autoencoder(nn.Module):
         decoded = self.dropout(decoded)  # Apply dropout after decoder
         return decoded
 
+# ~80% Precision ~80% Recall
 # This function does hyperparameter tuning for the LSTM Autoencoder model
 def hyperparameter_tuning_lstm_ae(X_train_tensor, X_val_tensor, firmware_names):
     input_size = X_train_tensor.shape[1] # No. columns/input features
@@ -356,6 +358,7 @@ def infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, firmware_na
 
     return y_pred
 
+# 100% Precision 100% Recall
 def hyperparameter_tuning_gmm(X_train_scaled, firmware_names):
     # working defaults:
     #     gmm params: {'covariance_type': 'full', 'init_params': 'kmeans', 'max_iter': 100, 'means_init': None, 'n_components': 6, 'n_init': 1, 'precisions_init': None, 'random_state': None, 'reg_covar': 1e-06, 
@@ -401,8 +404,83 @@ def infer_gmm_model(X_train_scaled, X_test_scaled, firmware_names):
     # plt.show()
 
     # TODO: Derive a less arbitrary threshold
-    T=-400
+    T=-400000
     y_test_proba[y_test_proba>=T]=0
     y_test_proba[y_test_proba<T]=1
+    y_pred = pd.DataFrame(y_test_proba, columns=['anomaly_predicted'])
+    return y_pred
+
+# 0% Precision 0% Recall
+def hyperparameter_tuning_xgb(X_train, firmware_names):
+
+    model = xgb.XGBClassifier(objective='binary:logistic')
+
+    y_train_xgb = X_train['anomaly']
+    X_train_xgb = X_train.drop(columns=['anomaly'])
+    # X_test_xgb = X_test.drop(columns=['anomaly'])
+
+
+    search_spaces = {
+        'max_depth':         (5, 10),
+        'learning_rate':     (0.01, 0.2),
+        'grow_policy':       ['depthwise', 'lossguide'],
+        'max_bin':           (256, 512),    
+        'n_estimators':      (100, 500),
+        'subsample':         (0.5, 1),
+        'colsample_bytree':  (0.5, 1),
+        'reg_alpha':         (0, 1),
+        'reg_lambda':        (0, 1),
+        'scale_pos_weight':  (1, 10),
+        'min_child_weight':  (1, 10),
+        'gamma':             (0, 1),
+        'num_parallel_tree': (1, 10),
+        'max_delta_step':    (0, 10),
+        'max_leaves':        (0, 2**8),
+        'tree_method':       ['auto', 'exact', 'approx', 'hist'],
+        'eval_metric':       ['error'],
+        'n_jobs':            (1, 10),
+        'disable_default_eval_metric': [0, 1],
+    }
+
+    bayes_search = BayesSearchCV(model, search_spaces, verbose=5)
+
+    bayes_search.fit(X_train_xgb, y_train_xgb)
+    best_params = bayes_search.best_params_
+    print(f'Best hyperparameters: {best_params}')
+    model.set_params(**best_params)
+    model.fit(X_train_xgb, y_train_xgb)
+    print(f'model params: {model.get_params()}')
+
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_folder = "models"
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_model_{firmware_names}.txt')  
+    pkl_path = os.path.join(current_dir, f'{model_folder}/best_xgb_model_{firmware_names}.pkl')  
+    joblib.dump(model, pkl_path)
+    print("Model saved")
+    with open(txt_path, 'w') as f:
+        f.write(str(best_params))
+    return model
+    
+def infer_xgb_model(X_train, X_test, firmware_names):
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_folder = "models"
+    model_path = os.path.join(current_dir, f'{model_folder}/best_xgb_model_{firmware_names}.pkl')
+    try: 
+        xgb_model = joblib.load(model_path)
+        # print(f"Existing Model Found. ")
+    except:
+        xgb_model = hyperparameter_tuning_xgb(X_train, firmware_names)
+
+    # print(f'model params: {xgb_model.get_params()}')
+
+    y_train_xgb = X_train['anomaly']
+    X_train_xgb = X_train.drop(columns=['anomaly'])
+    y_test_xgb = X_test['anomaly']
+    X_test_xgb = X_test.drop(columns=['anomaly'])
+    xgb_model.fit(X_train_xgb, y_train_xgb)
+    y_test_proba = xgb_model.predict(X_test_xgb)
+    # print(y_test_proba)
     y_pred = pd.DataFrame(y_test_proba, columns=['anomaly_predicted'])
     return y_pred

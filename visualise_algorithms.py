@@ -8,26 +8,74 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 
-def plot_scatter(df):
+# def plot_scatter(algorithm, df):
+#     df = df.reset_index()
+#     plt.figure(figsize=(14,8))
+#     for column in df.columns:
+#         # print(column)
+#         if column not in ['timestamp', 'anomaly', 'anomaly_predicted']:
+#             plt.scatter(x=df['timestamp'], y=df[column], label=column)
+
+#     for i, row in df.iterrows():
+#         if row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1: # True positive
+#             plt.axvspan(row['timestamp'], row['timestamp'], color='red', alpha=0.3)
+#         elif row['anomaly'] == 0 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1: # False Positive
+#             plt.axvspan(row['timestamp'], row['timestamp'], color='green', alpha=0.3)
+#         elif row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 0: # False Negative
+#             plt.axvspan(row['timestamp'], row['timestamp'], color='purple', alpha=0.3)
+
+#     plt.title(f'{algorithm}')
+#     plt.xlabel('Timestamp')
+#     plt.ylabel('Value')
+#     plt.legend()
+#     plt.show()
+
+def plot_scatter(algorithm, df):
     df = df.reset_index()
-    plt.figure(figsize=(14,8))
+    plt.figure(figsize=(14, 8))
+
+    # Plot each feature's scatter plot
     for column in df.columns:
-        # print(column)
         if column not in ['timestamp', 'anomaly', 'anomaly_predicted']:
             plt.scatter(x=df['timestamp'], y=df[column], label=column)
 
-    for i, row in df.iterrows():
-        if row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1: # True positive
-            plt.axvspan(row['timestamp'], row['timestamp'], color='red', alpha=0.3)
-        elif row['anomaly'] == 0 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1: # False Positive
-            plt.axvspan(row['timestamp'], row['timestamp'], color='green', alpha=0.3)
-        elif row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 0: # False Negative
-            plt.axvspan(row['timestamp'], row['timestamp'], color='purple', alpha=0.3)
+    # Variables to store legend handles
+    tp_patch = None
+    fp_patch = None
+    fn_patch = None
 
+    # Highlight true positives, false positives, and false negatives
+    for i, row in df.iterrows():
+        if row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1:  # True positive
+            plt.axvspan(row['timestamp'], row['timestamp'], color='red', alpha=0.3)
+            if tp_patch is None:
+                tp_patch = plt.Line2D([0], [0], color='red', lw=4, label='True Positive')
+        elif row['anomaly'] == 0 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 1:  # False positive
+            plt.axvspan(row['timestamp'], row['timestamp'], color='green', alpha=0.3)
+            if fp_patch is None:
+                fp_patch = plt.Line2D([0], [0], color='green', lw=4, label='False Positive')
+        elif row['anomaly'] == 1 and 'anomaly_predicted' in row and row['anomaly_predicted'] == 0:  # False negative
+            plt.axvspan(row['timestamp'], row['timestamp'], color='purple', alpha=0.3)
+            if fn_patch is None:
+                fn_patch = plt.Line2D([0], [0], color='purple', lw=4, label='False Negative')
+
+    # Add title and labels
+    plt.title(f'{algorithm}')
     plt.xlabel('Timestamp')
     plt.ylabel('Value')
-    plt.legend()
+
+    # Collect the handles for the scatter plots and the axvspan color patches
+    handles, labels = plt.gca().get_legend_handles_labels()
+    custom_legend = [tp_patch, fp_patch, fn_patch]
+    
+    # Filter out None values in the custom legend and combine with scatter plot labels
+    custom_legend = [patch for patch in custom_legend if patch is not None]
+    handles.extend(custom_legend)
+
+    # Add legend to the plot
+    plt.legend(handles=handles, loc='best')
     plt.show()
+  
 
 def plot_3d(inliers, outliers):
     fig = plt.figure()
