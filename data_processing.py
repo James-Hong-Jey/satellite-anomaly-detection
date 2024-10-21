@@ -15,6 +15,36 @@ import hashlib
 # Ignore warnings
 warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
 
+def delete_models(algorithm=None, firmware_names=None):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    model_folder = "models"
+    model_path = os.path.join(current_dir, f'{model_folder}/')
+
+    # Delete all
+    if algorithm is not None and firmware_names is not None:
+        firmware_names = hash_firmware_names(firmware_names)
+        for file in os.listdir(model_path):
+            if firmware_names in file and algorithm in file:
+                os.remove(os.path.join(model_path, file))
+        
+    # Delete by firmware_names
+    elif firmware_names is not None:
+        firmware_names = hash_firmware_names(firmware_names)
+        for file in os.listdir(model_path):
+            if firmware_names in file:
+                os.remove(os.path.join(model_path, file))
+
+    # Delete by algorithm
+    elif algorithm is not None:
+        for file in os.listdir(model_path):
+            if anomaly in file:
+                os.remove(os.path.join(model_path, file))
+    
+    else:
+        for file in os.listdir(model_path):
+            if "README.md" not in file:
+                os.remove(os.path.join(model_path, file))
+
 def get_df(filename, selected_columns):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     csv_path = os.path.join(current_dir, f'data/{filename}_pivot.csv')
@@ -161,10 +191,14 @@ def insert_anomalies(df, num_of_anomalies=3, random_state=42):
     # firmware_names = ['ADCS_ACS_RW.X.temp', 'ADCS_ACS_RW.Y.temp', 'ADCS_ACS_RW.Z.temp', 'ADCS_ADC_MCU.temp', 'ADCS_ADC_TS.temp[0]', 'ADCS_ADC_TS.temp[1]']
     firmware_names = df.drop(columns=['anomaly']).columns.tolist()
     for random_index in random_indexes:
+        # print(f'Anomaly inserted at index {random_index}')
+        # print(df.loc[random_index])
         near_zero_increment = 8
         random_firmware = random.choice(firmware_names)
-        multiplier = random.randrange(1, 30)/10
-        difference = max(abs(df.loc[random_index, random_firmware] * multiplier - df.loc[random_index, random_firmware]), 8)
+        multiplier = random.randrange(5, 15)/10
+        minimum_difference = 2
+        difference = max(abs(df.loc[random_index, random_firmware] * multiplier - df.loc[random_index, random_firmware]), minimum_difference)
+        # print(f'Difference = {difference}')
         df.loc[random_index, random_firmware] = df.loc[random_index, random_firmware] + int(difference)
         df.loc[random_index, 'anomaly'] = 1
     return df

@@ -12,7 +12,7 @@ warnings.filterwarnings('always')
 
 # firmware names is an array of all involved firmware names, and inference point is a numpy array of values corresponding to those firmware names
 def single_point_inference(df, algorithm, inference_point, selected_columns):
-    if df == None:
+    if df is None:
         single_df = get_df("dec_2023_data", selected_columns)
     else:
         single_df = df.copy(deep=True)
@@ -43,13 +43,13 @@ def multi_point_visualisation(df, algorithm, selected_columns, num_of_anomalies=
     y_test = X_test[['anomaly']]
     match algorithm:
         case 'IF':
-            y_pred = infer_iforest_model(X_train_scaled, X_test_scaled, y_test, selected_columns)
+            y_pred = infer_if_model(X_train_scaled, X_test_scaled, y_test, selected_columns)
             visual_X_test = X_test
         case 'OCSVM':
             y_pred = infer_ocsvm_model(X_train_scaled, X_test_scaled, y_test, selected_columns)
             visual_X_test = X_test
         case 'LSTM':
-            y_pred = infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, selected_columns, num_of_std=3.5, plot_error=False) # Change this figure to affect recall
+            y_pred = infer_lstm_ae_model(X_train_tensor, X_val_tensor, X_test_tensor, selected_columns, num_of_std=3, plot_error=False) # Change this figure to affect recall
             visual_X_test = X_test_lstm
         case 'GMM':
             y_pred = infer_gmm_model(X_train_scaled, X_test_scaled, selected_columns) # "distance" based probabilistic models benefit from scaling
@@ -108,11 +108,11 @@ if __name__ == "__main__":
 
     # 1) Fill in filename, choose which list of columns to use 
     filename = "dec_2023_data"
-    selected_columns = TS_temp_5
+    selected_columns = all_adcs_params 
     hashed_columns = hash_firmware_names(selected_columns) # hashed > 200 chars, untouched otherwise
     df = get_df(filename, selected_columns)   
 
-    plot_scatter(selected_columns, df)
+    # plot_scatter(selected_columns, df)
 
     random_state = 42
     algorithms = ['IF', 'OCSVM', 'LSTM', 'GMM', 'XGB']
@@ -120,19 +120,24 @@ if __name__ == "__main__":
     # 2) Uncomment either multi_point_visualisation or benchmark_algorithm, don't do both
     # Results from benchmark_algorithm will be saved in ./results, rename to prevent overwrite
     # Alternatively, comment out the for loop and specify algorithm manually
-    # for algorithm in algorithms:
-    #     multi_point_visualisation(df, algorithm, hashed_columns, 4, random_state)
-        # benchmark_algorithm(df, algorithm, hashed_columns, n=1000, num_of_anomalies=10)
+
+    # delete_models()
+    # multi_point_visualisation(df, 'LSTM', hashed_columns, 4, random_state)
+    # benchmark_algorithm(df, 'LSTM', hashed_columns, n=1000, num_of_anomalies=10)
+
+    for algorithm in algorithms:
+        # multi_point_visualisation(df, algorithm, hashed_columns, 4, random_state)
+        delete_models(algorithm=algorithm, firmware_names=selected_columns)
+        benchmark_algorithm(df, algorithm, hashed_columns, n=300, num_of_anomalies=5)
 
     # 3) Uncomment single_point_inference to test a single point
     # When switching between single_point_inference and multi_point_visualisation, 
     # remember to delete the corresponding models in ./models to retrain it
-
-    test_anomaly = [-0.5824, -0.0612, -0.7458, -0.7021, 20]
+    delete_models(algorithm='GMM', firmware_names=selected_columns)
+    test_normal = [1, 4, 8, 8, 0]
+    test_anomaly = [1, 4, 8, 8, 3]
+    single_point_inference(df, 'GMM', test_normal, selected_columns)
     single_point_inference(df, 'GMM', test_anomaly, selected_columns)
-
-    # test_normal = [-0.5824, -0.0612, -0.7458, -0.7021, 3.0000]
-    # single_point_inference(df, 'GMM', test_normal, selected_columns)
 
     end = time.time()
     print(f'Execution time: {end - start}s')

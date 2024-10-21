@@ -10,6 +10,7 @@ import joblib
 import ast
 import matplotlib.pyplot as plt
 import os
+import statistics
 from matplotlib.colors import LogNorm
 from sklearn import mixture
 from sklearn.metrics import classification_report
@@ -21,18 +22,18 @@ import xgboost as xgb
 # TODO: Clean up the current directory stuff, not everything is consistent right now
 
 # This function trains the Isolation Forest model and predicts the anomalies for the test data
-def infer_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
+def infer_if_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
     """ This portion of the code trains the model with the training data and applies the model on the test data """
     
     # Load the best model and its hyperparameters for the specified TM Dataset
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    model_path = os.path.join(current_dir, f'{model_folder}/best_isolation_forest_model_{firmware_names}.pkl')
+    model_path = os.path.join(current_dir, f'{model_folder}/best_IF_model_{firmware_names}.pkl')
     try: 
         best_model = joblib.load(model_path)
     except:
         # Uncomment the following line to do hyperparameter tuning and save the best model and its hyperparameters
-        hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmware_names)
+        hyperparameter_tuning_if(X_train_scaled, X_test_scaled, y_test, firmware_names)
         best_model = joblib.load(model_path)
 
     # Predict the anomaly for the test data
@@ -42,7 +43,7 @@ def infer_iforest_model(X_train_scaled, X_test_scaled, y_test, firmware_names):
     return y_pred
 
 # This function does hyperparameter tuning for the Isolation Forest model
-def hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmware_names):
+def hyperparameter_tuning_if(X_train_scaled, X_test_scaled, y_test, firmware_names):
     # Define hyperparameter space
     contamination_values = [0.1, 0.001, 1e-6]
     # contamination_values = np.linspace(0.001, 0.400, 10)
@@ -87,8 +88,8 @@ def hyperparameter_tuning_iforest(X_train_scaled, X_test_scaled, y_test, firmwar
     # Save the best model and its hyperparameters
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
-    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_isolation_forest_{firmware_names}.txt')  
-    pkl_path = os.path.join(current_dir, f'{model_folder}/best_isolation_forest_model_{firmware_names}.pkl')  
+    txt_path = os.path.join(current_dir, f'{model_folder}/best_hyperparameters_IF_{firmware_names}.txt')  
+    pkl_path = os.path.join(current_dir, f'{model_folder}/best_IF_model_{firmware_names}.pkl')  
     joblib.dump(best_model, pkl_path)
     print("Model saved")
     with open(txt_path, 'w') as f:
@@ -376,7 +377,8 @@ def hyperparameter_tuning_gmm(X_train_scaled, firmware_names):
     print(f'Best hyperparameters: {best_params}')
     gmm.set_params(**best_params)
     print(f'gmm params: {gmm.get_params()}')
-
+    gmm.score_samples(X_train_scaled)
+    print(f'gmm score: {gmm.score(X_train_scaled)}')
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
@@ -388,7 +390,7 @@ def hyperparameter_tuning_gmm(X_train_scaled, firmware_names):
         f.write(str(best_params))
     return gmm
 
-def infer_gmm_model(X_train_scaled, X_test_scaled, firmware_names):
+def infer_gmm_model(X_train_scaled, X_test_scaled, firmware_names, z_score=3):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     model_folder = "models"
     model_path = os.path.join(current_dir, f'{model_folder}/best_gmm_model_{firmware_names}.pkl')
@@ -399,14 +401,21 @@ def infer_gmm_model(X_train_scaled, X_test_scaled, firmware_names):
         gmm = hyperparameter_tuning_gmm(X_train_scaled, firmware_names)
 
     y_test_proba = gmm.score_samples(X_test_scaled)
+    x_train_proba = gmm.score_samples(X_train_scaled)
+    # print(f"Mean: {statistics.fmean(x_train_proba)}")
+    # print(f"STD: {statistics.stdev(x_train_proba)}")
+    # print(f"Minimum: {x_train_proba.min()}")
     # plt.plot(y_test_proba)
     # plt.title('Anomaly')
     # plt.show()
 
     # TODO: Derive a less arbitrary threshold
-    T=-400000
-    y_test_proba[y_test_proba>=T]=0
-    y_test_proba[y_test_proba<T]=1
+    # threshold=-15
+
+    # The minimum value of the training data, minus 1x standard deviation
+    threshold = x_train_proba.min() - z_score * statistics.stdev(x_train_proba)
+    y_test_proba[y_test_proba >= threshold] = 0
+    y_test_proba[y_test_proba < threshold] = 1
     y_pred = pd.DataFrame(y_test_proba, columns=['anomaly_predicted'])
     return y_pred
 
