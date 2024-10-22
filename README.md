@@ -4,7 +4,7 @@ Study of AI/ML techniques to autonomously detect, isolate and recover from space
 
 The dataset originally studied was Lumelite 4's Whole Orbit Data (WOD) from December 2023, and study typically revolved around ADCS Temperature Sensors. It can be configured in two modes, single point inference (for use on incoming housekeeping data) and multi point visualisation mode (for large amounts of data). Furthermore it can be configured to use different algorithms. 
 
-The algorithms available are Isolation Forest (IF), One-Class Support Vector Machine (OCSVM), and Long-Short-Term Memory Autoencoder (LSTM Autoencoder) from Scikitlearn & Pytorch. By default, LSTM Autoencoder is used.
+The algorithms available are Isolation Forest (IF), One-Class Support Vector Machine (OCSVM), Long-Short-Term Memory Autoencoder (LSTM Autoencoder), Gaussian Mixture Model (GMM) and XGBoost (XGB). The best algorithm thus far is GMM. 
 
 ## Setup
 Project was developed in ```Python 3.12.3```
